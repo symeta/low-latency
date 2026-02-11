@@ -2,7 +2,7 @@
 
 ## Why Time Precision Matters
 
-- Critical trading scenarios:
+**Critical trading scenarios:**
 
 - Scenario 1: Order Sequencing
 ```txt
@@ -40,7 +40,7 @@ Without accurate time: Regulatory violations
 
 ## Part 1: Evolution of EC2 Time Sync Service
 
-- Historical Context (Pre-2023)
+**Historical Context (Pre-2023)**
 
 - Original EC2 Time Sync (2017-2023):
 ```txt
@@ -60,7 +60,7 @@ Performance:
 Result: Inadequate for HFT/low-latency trading
 ```
 
-- Improved EC2 Time Sync Service (November 2023)
+**Improved EC2 Time Sync Service (November 2023)**
 
 - Major improvements announced at re:Invent 2023:
 
@@ -98,7 +98,7 @@ New Architecture (Metronome):
 
 ## Part 2: Configuring Improved EC2 Time Sync
 
-Prerequisites Check
+**Prerequisites Check**
 
 ```sh
 #!/bin/bash
@@ -137,7 +137,7 @@ fi
 timedatectl status
 ```
 
-PTP Hardware Clock Configuration (7th Gen Instances)
+**PTP Hardware Clock Configuration (7th Gen Instances)**
 
 ```sh
 #!/bin/bash
@@ -199,7 +199,8 @@ echo "=== Reference Clock Status ==="
 chronyc sources -v
 ```
 
-Expected performance with PHC:
+**Expected performance with PHC:**
+
 ```txt
 PTP Hardware Clock Configuration:
   Offset: 10-25 μs (typical)
@@ -216,7 +217,7 @@ Tracking output example:
   Skew            : 0.012 ppm
 ```
 ## Part 3: Clock-Bound for Error Awareness
-- What is Clock-Bound?
+**What is Clock-Bound?**
 
 - Clock-Bound is an AWS open-source library that provides:
 
@@ -334,7 +335,7 @@ int main() {
 ```
 
 ## Part 4: White Rabbit - Sub-Nanosecond Precision
-- What is White Rabbit?
+**What is White Rabbit?**
 
 - White Rabbit extends IEEE 1588 PTP to achieve:
 
@@ -351,7 +352,7 @@ int main() {
     - Outposts deployment - Best suited for on-premises extension
     - Cost - Equipment expensive (~$5k-15k per node)
 
-- Viable deployment scenarios:
+**Viable deployment scenarios:**
 
 - Scenario 1: Outposts Rack with White Rabbit
 
@@ -385,7 +386,8 @@ Use case: Exchange co-location
 
 ## Part 5: Clock Skew Measurement and Monitoring
 
-- Measuring Clock Skew
+**Measuring Clock Skew**
+
 - Method 1: Internal Monitoring with chrony
 ```sh
 #!/bin/bash
@@ -451,87 +453,5 @@ def monitor_clock_accuracy(duration_seconds=60):
 
 if __name__ == "__main__":
     monitor_clock_accuracy(60)
-
-```
-## Part 6: Impact on Trading System Latency
-- Latency Budget Analysis
-
-- Without Time Sync Optimization:
-```txt
-┌────────────────────────────────────────────┐
-│ Market data arrives at NIC      : T0       │
-│ ↓ NIC processing                : 3 μs     │
-│ ↓ Kernel network stack          : 15 μs    │
-│ ↓ Application processing        : 8 μs     │
-│ ↓ Strategy decision             : 12 μs    │
-│ ↓ Order generation              : 5 μs     │
-│ ↓ Send to exchange              : 7 μs     │
-│ ↓ Network to exchange           : 100 μs   │
-│ ↓ Exchange processing           : 50 μs    │
-│ Order acknowledgment            : T1       │
-│                                            │
-│ TOTAL LATENCY: 200 μs                      │
-│                                            │
-│ TIMESTAMP MEASUREMENT ERROR:               │
-│   With 500 μs clock error → Can't measure  │
-│   accurately (error > signal!)             │
-└────────────────────────────────────────────┘
-```
-- With PHC Time Sync (20-40 μs precision):
-```txt
-┌────────────────────────────────────────────┐
-│ Same processing: 200 μs                    │
-│                                            │
-│ TIMESTAMP MEASUREMENT ERROR:               │
-│   With 30 μs clock error:                  │
-│   - Can measure 200 μs ± 30 μs             │
-│   - 85% accuracy ✅                        │
-│   - Sufficient for optimization            │
-│                                            │
-│ BENEFITS:                                  │
-│   ✅ Accurate latency profiling            │
-│   ✅ Detect network degradation            │
-│   ✅ Compare strategy performance          │
-│   ✅ Regulatory compliance                 │
-└────────────────────────────────────────────┘
-```
-Real-World Trading Scenarios
-
-Arbitrage with Clock-Bound:
-
-```python
-from clockbound import ClockBound
-
-class ArbitrageEngine:
-    def __init__(self, max_clock_error_us=50):
-        self.cb = ClockBound()
-        self.max_error = max_clock_error_us * 1000  # Convert to ns
-
-    def can_trade(self):
-        """Check if clock precision sufficient for arbitrage"""
-        ts = self.cb.now()
-
-        if ts.error_bound > self.max_error:
-            print(f"Clock error {ts.error_bound/1000:.1f} μs exceeds "
-                  f"maximum - PAUSING TRADING")
-            return False
-
-        return True
-
-    def execute_arbitrage(self, exchange1_price, exchange2_price):
-        if not self.can_trade():
-            return None
-
-        ts1 = self.cb.now()
-        spread = exchange2_price - exchange1_price
-
-        # Account for clock uncertainty
-        max_price_movement = 0.0001 * (ts1.error_bound / 1000000.0)
-        effective_spread = spread - max_price_movement
-
-        if effective_spread > 0.001:  # 10 bps minimum
-            return self.place_orders(exchange1_price, exchange2_price)
-
-        return None
 
 ```
