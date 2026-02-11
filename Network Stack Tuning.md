@@ -502,3 +502,5 @@ numactl --cpunodebind=$NIC_NUMA --membind=$NIC_NUMA \
 - Pin IRQs and applications to NUMA-local CPUs
 - Use AF_XDP for ultimate performance (58% latency reduction)
 - Test iteratively - layer optimizations and measure each step
+
+https://pages.awscloud.com/rs/112-TZM-766/images/Amazon%20EC2%20Overview%20and%20Networking%20Introduction%20for%20Telecom%20Companies_update_v5_20_06_2023.pdf
