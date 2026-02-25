@@ -184,9 +184,9 @@
 
 - Major Providers:
 
-    - McKay Brothers: Specializes in ultra-low-latency routes
-    - BSO (BT Radianz): Global financial network
-    - Avelacom: Low-latency connectivity for trading
+    - McKay Brothers
+    - BSO (BT Radianz)
+    - Avelacom
     - Equinix
     - Colts
     - Megaport
