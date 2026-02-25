@@ -1,4 +1,4 @@
-# Core Strategy: Three-Pronged Approach
+# Core Strategy
 
 ## 1. Accessing External Matching Engines
 ### Identifying Exchange Endpoints
