@@ -3,12 +3,12 @@
 ## 1. Accessing External Matching Engines
 ### Identifying Exchange Endpoints
 
-- Cryptocurrency Trading Endpoints (Priority Order):
+- Cryptocurrency Trading Endpoints (Priority Order, take binance for instance):
 
-    - Futures Liquidity Provider Programs: fapi-mm.binxxxx.com | wss://fstream-mm.binxxxx.com
-    - Futures Trading (USDT-M): fapi.binxxxx.com | wss://fstream.binxxxx.com
-    - Futures Trading (COIN-M): dapi.binxxxx.com | wss://dstream.binxxxx.com
-    - Spot Trading: api.binxxxx.com | api1-4.binxxxx.com | api-gcp.binxxxx.com
+    - Futures Liquidity Provider Programs: fapi-mm.binance.com | wss://fstream-mm.binance.com
+    - Futures Trading (USDT-M): fapi.binance.com | wss://fstream.binance.com
+    - Futures Trading (COIN-M): dapi.binance.com | wss://dstream.binance.com
+    - Spot Trading: api.binance.com | api1-4.binance.com | api-gcp.binance.com
 
 - Endpoint Discovery Process:
 
