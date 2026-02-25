@@ -10,11 +10,20 @@
     - Futures Trading (COIN-M): dapi.binxxxx.com | wss://dstream.binxxxx.com
     - Spot Trading: api.binxxxx.com | api1-4.binxxxx.com | api-gcp.binxxxx.com
 
-- Endpoint Discovery Process: When you don't have terminal access, use mobile tools:
+- Endpoint Discovery Process:
 
-    - Tool: https://mxtoolbox.com/SuperTool.aspx
+    - When you don't have terminal access, use mobile tools: https://mxtoolbox.com/SuperTool.aspx
     - Perform DNS lookups to identify IP addresses
+      ```sh
+      % dig api.binance.com +short
+      d3h36i1mno13q3.cloudfront.net.
+      13.33.212.224
+      ```
     - Perform Reverse Lookups to identify the exact Availability Zone
+      ```sh
+      % dig -x 3.168.245.99 +short
+      server-3-168-245-99.nrt57.r.cloudfront.net.
+      ```
     - Critical: AZ name-to-ID mapping differs across AWS accounts, so verify using EC2 → Settings or RAM homepage
 
 ### "EC2 Hunting" Methodology
