@@ -18,7 +18,7 @@ TOTAL: 43+ μs per packet (unoptimized)
 
 **Our goal: Reduce to sub-20 μs**
 
-## Part 1: ENA Driver Optimization
+## ENA Driver Optimization
 - Disabling Hardware Offloads
 
 **Generic Receive Offload (GRO) - The Latency Killer**
@@ -112,7 +112,7 @@ ethtool -g eth0
     - 512: Acceptable latency (P99: 65 μs), handles large bursts
     - 4096 (default): High latency (P99: 145 μs) - avoid for trading
 
-## Part 2: AF_XDP Zero-Copy Support
+## AF_XDP Zero-Copy Support
 
 **The Game Changer**
 
@@ -233,7 +233,7 @@ AF_XDP Zero-Copy:
   P99.9: 65 μs  ← 77% improvement
 ```
 
-## Part 3: Ntuple Flow Steering
+## Ntuple Flow Steering
 **Purpose: Direct Specific Traffic to Specific CPU Cores**
 
 Requirements: Nitro v5+ instances (c6i, m6i, c7i, m7i, r7i)
@@ -286,7 +286,7 @@ With Flow Steering:
   Result: Optimized caching, predictable
 ```
 
-## Part 4: Kernel Tuning
+## Kernel Tuning
 **1. Busy Poll Mode**
 
 Eliminates interrupt latency by continuous polling:
