@@ -39,7 +39,7 @@ TOTAL: 3-8 μs
 P99: 12-25 μs
 ```
 
-## Part 1: DPDK (Data Plane Development Kit)
+## DPDK (Data Plane Development Kit)
 
 - **What is DPDK?**
 
@@ -381,7 +381,7 @@ Aeron (DPDK):
   P99.9: 65 μs  (77% improvement)
 ```
 
-## Part 2: AF_XDP (XDP Sockets)
+## AF_XDP (XDP Sockets)
 
 - **What is AF_XDP?**
 
@@ -494,7 +494,7 @@ gcc -O3 af_xdp_trading.c -o af_xdp_trading -lxdp -lbpf -lpthread
 sudo ./af_xdp_trading
 ```
 
-## Part 3: eBPF as Alternative
+## eBPF as Alternative
 
 - **What is eBPF?**
 
@@ -559,7 +559,7 @@ clang -O2 -target bpf -c xdp_filter.c -o xdp_filter.o
 sudo ip link set dev eth0 xdp obj xdp_filter.o sec xdp
 ```
 
-## Part 4: Onload Support Status
+## Onload Support Status
 
 - The Bad News
 
@@ -579,7 +579,7 @@ sudo ip link set dev eth0 xdp obj xdp_filter.o sec xdp
     - ✅ Standard sockets with optimizations
     - ❌ Onload (not supported, don't try)
 
-## Part 5: Technology Comparison
+## Technology Comparison
 
 Comprehensive Comparison Matrix
 
