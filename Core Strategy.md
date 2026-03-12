@@ -50,7 +50,6 @@
 
 - Step 4: Selection Strategy
 
-    - Keep only the instances with the best performance
     - Consider spinning up many instances, measuring all, then terminating all except the fastest
 
 ### Cluster Placement Groups (CPGs)
