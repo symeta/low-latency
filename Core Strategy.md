@@ -89,7 +89,6 @@
 - Core Principle: Static Stability
 
     - Deploy all hot-path components in **a single Availability Zone**
-    - Keep spares and failover instances in the same AZ
     - Send data asynchronously to other AZs only for disaster recovery
     - Avoid cross-AZ traffic in normal operations (adds 1-2ms latency)
 
@@ -97,8 +96,6 @@
 
     - Data Plane: Maximize resilience per AZ, minimize complexity
         - Handle all latency-sensitive trading operations
-        - Keep simple, fast, and reliable
-        - Over-provision for baseline and burst characteristics
     - Control Plane: Handle complexity, can be multi-AZ
         - Configuration management
         - Monitoring and alerting
@@ -107,21 +104,18 @@
 ### VPC Connectivity Options
 
 - VPC Peering (Recommended):
-
     - Lowest latency for VPC-to-VPC traffic
     - Direct connection without intermediate hops
     - Supports high bandwidth with consistent latency
     - Use case: Connecting trading systems across different VPCs
 
 - Transit Gateway (Avoid for Hot Path):
-
     - Adds latency and jitter
     - Introduces additional network hop
     - Only use for: Control plane traffic or non-latency-sensitive workloads
     - Some customers use TGW for multicast, but this adds significant overhead
 
 - Public IP (Same AZ):
-
     - Lower latency than PrivateLink
     - Removes NLB from the path
     - Traffic stays within AWS network despite using public IPs
@@ -130,13 +124,10 @@
 ### Removing Middleboxes from Hot Paths
 
 - Load Balancers:
-
     - Remove all load balancers (ELB, ALB, NLB) from latency-sensitive paths
-    - Each load balancer adds latency and introduces jitter
     - Use direct instance-to-instance communication
 
 - Service Discovery Alternatives:
-
     - Implement distributed consensus mechanisms (e.g., Raft, Paxos)
     - Use client-side intelligence for routing decisions
     - Maintain in-memory caching of service membership
@@ -144,7 +135,6 @@
     - Consider service mesh patterns with sidecar proxies (but measure impact)
 
 - Cache Co-location:
-
     - Co-locate caches "on-box" rather than using ElastiCache
     - Use in-process or shared memory for fastest access
     - Eliminates network round-trip for cache lookups
