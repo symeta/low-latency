@@ -1,78 +1,91 @@
 # Core Strategy
 
-## 1. Accessing External Matching Engines
+## 1. Accessing Crypto Exchange Matching Engines
+### Cryptocurrency and the Financial System
+
+- The Role of Cryptocurrency:
+
+    - Has come to play a critically important role in modern financial systems
+    - Possesses a mechanism that autonomously builds trust in the transaction process
+    - Achieves in a decentralized manner what central financial institutions like central banks and state-owned banks have traditionally provided
+      >💡Cryptocurrency is not a replacement for fiat currency, but rather a beneficial complement to it
+
+- Classification of Crypto-Asset Companies:
+
+    - Crypto-asset exchanges
+    - Crypto-asset quantitative trading firms
+    - Crypto-asset market data providers
+      >💡Individual traders exist in large numbers but are not treated as clients in this context since they are not enterprises
+
+- Current State of Cloud Adoption:
+
+    - Nearly all crypto-asset companies build their workloads on the cloud
+    - Over 90% of exchange workloads run on AWS
+    - Quantitative trading firms and data providers also almost universally use AWS
+
 ### Identifying Exchange Endpoints
-
-- Cryptocurrency Trading Endpoints (Priority Order, take binance for instance):
-
-    - Futures Liquidity Provider Programs: fapi-mm.binance.com | wss://fstream-mm.binance.com
-    - Futures Trading (USDT-M): fapi.binance.com | wss://fstream.binance.com
-    - Futures Trading (COIN-M): dapi.binance.com | wss://dstream.binance.com
-    - Spot Trading: api.binance.com | api1-4.binance.com | api-gcp.binance.com
 
 - Endpoint Discovery Process:
 
-    - When you don't have terminal access, use mobile tools: https://mxtoolbox.com/SuperTool.aspx
-    - Perform DNS lookups to identify IP addresses
+    - First, confirm where the matching engine endpoints are located
+    - Using Binance as an example, list the matching engine endpoints actually in use
+      >💡The endpoint listed at the top is the most frequently used
+
+- Leveraging Lookup Tools:
+
+    - Use DNS Lookup to identify IP addresses
       ```sh
       % dig api.binance.com +short
-      d3h36i1mno13q3.cloudfront.net.
-      13.33.212.224
       ```
-    - Perform Reverse Lookups to identify the exact Availability Zone
+    - Perform reverse lookups to obtain the Availability Zone (AZ) where the endpoint is placed
       ```sh
-      % dig -x 3.168.245.99 +short
-      server-3-168-245-99.nrt57.r.cloudfront.net.
+      % dig -x <IP_ADDRESS> +short
       ```
+      >💡Even without terminal access, web-based tools can be used to perform the same lookups
+
 ### "EC2 Hunting" Methodology
 
-**This is a systematic approach to finding optimal instance placement:**
+**A systematic approach to finding optimal instance placement:**
 
-- Step 1: Narrow Down Location
+- Step 1: Build Test Infrastructure
 
-    - Identify specific Region and Availability Zone where the exchange endpoint resides
-      >💡Use DNS/reverse lookup tools to pinpoint the exact location
+    - After confirming the location of the matching engine endpoint, create multiple EC2 instances and compare performance
+    - Avoid creating only a single instance type, as they are likely to be placed in the same data center
+      >💡Creating multiple instance types is recommended
 
-- Step 2: Deploy Test Infrastructure
+- Step 2: Verify AZ Mapping
 
-    - Launch instances across spread/partition placement groups to scatter them across different racks
-    - Deploy different EC2 instance types to prevent clustering within a single data center
-      >💡This ensures you're testing from various physical locations within the AZ
-    - Critical: AZ name-to-ID mapping differs across AWS accounts,
-      >💡verify using EC2 → Settings or RAM homepage
+    - AZ name-to-ID mapping often differs across AWS accounts
+      >💡Use EC2 placement information and RAM to investigate the mapping yourself
 
-- Step 3: Comprehensive Testing
+- Step 3: Measure Latency and Select
 
-    - Test connectivity from a broad set of EC2 instances
-    - Use TCP ping + application-level ping for benchmarking
-    - Measure latency from each instance to the target endpoint
-    - Capture extensive data for offline analysis (histograms, percentiles)
-
-- Step 4: Selection Strategy
-
-    - Consider spinning up many instances, measuring all, then terminating all except the fastest
+    - Measure communication latency between each instance and the endpoint
+    - Use both TCP ping and application-level ping for testing
+    - Select the best-performing instance and terminate the rest
 
 ### Cluster Placement Groups (CPGs)
 
 - Standard CPGs:
 
-    - Essential for lowest latency within your own infrastructure
-    - Places instances in close physical proximity within a single AZ
-    - Provides single-digit microsecond latency between instances
+    - A mechanism to reduce communication latency between EC2 instances
+    - Placing multiple EC2 instances in the same CPG increases the likelihood of placement within the same physical data center, rack, or server
+    - Available within a single AWS account
+    - Quantitative trading firms can achieve single-digit microsecond latency by placing trading workloads in the same CPG
 
 - Shared CPGs (Advanced):
 
-    - Allows cross-account connectivity with exchanges
-    - Requires NDA discussions with the exchange
-    - Provides the absolute lowest latency to exchange matching engines
-    - Not all exchanges offer this, but it's worth requesting
+    - Available across multiple AWS accounts
+    - Enables placing quantitative trading firm EC2 instances and exchange EC2 instances in the same shared CPG
+    - Requires the exchange to offer shared CPG availability
+    - Requires an NDA (Non-Disclosure Agreement) between parties
+      >💡Currently, not many exchanges offer shared CPGs
 
 - Alternative: PrivateLink
 
-    - Some exchanges offer PrivateLink connectivity
-    - Trade-off: Adds Network Load Balancer (NLB) overhead
-    - Slower than shared CPGs but still better than public internet
-    - Easier to set up than shared CPGs
+    - Many exchanges offer PrivateLink connectivity
+    - Higher latency than CPGs, but lower than public internet
+    - Easier to set up and deploy than shared CPGs
 
 ### Connectivity Performance Hierarchy
 
@@ -80,139 +93,76 @@
 
     - Shared CPG (cross-account, same physical rack)
     - Public IP in same AZ (removes NLB from path)
-    - PrivateLink (adds NLB overhead)
+    - PrivateLink (NLB overhead added)
     - Public internet (variable latency)
 
 ## 2. Intra-VPC Optimization
 ### Single AZ Deployment Strategy
 
-- Core Principle: Static Stability
+- Core Principle: Consolidate into a Single AZ
 
-    - Deploy all hot-path components in **a single Availability Zone**
-    - Send data asynchronously to other AZs only for disaster recovery
-    - Avoid cross-AZ traffic in normal operations (adds 1-2ms latency)
+    - All core trading workloads must be deployed in **a single Availability Zone**
+    - Peripheral workloads such as disaster recovery (DR) can be placed in other AZs
+    - Cross-AZ communication latency is approximately 1-2 milliseconds, so cross-AZ traffic should be avoided as much as possible
+      >💡When prioritizing low latency, cross-AZ traffic must always be avoided
 
 - Architecture Separation:
 
-    - Data Plane: Maximize resilience per AZ, minimize complexity
-        - Handle all latency-sensitive trading operations
-    - Control Plane: Handle complexity, can be multi-AZ
-        - Configuration management
-        - Monitoring and alerting
-        - Non-latency-sensitive mutations
+    - Data Plane: Deploy in a single AZ to handle latency-sensitive trading operations
+    - Control Plane: Can be deployed in a separate AZ (configuration management, monitoring, alerting, etc.)
 
 ### VPC Connectivity Options
 
 - VPC Peering (Recommended):
     - Lowest latency for VPC-to-VPC traffic
     - Direct connection without intermediate hops
-    - Supports high bandwidth with consistent latency
-    - Use case: Connecting trading systems across different VPCs
+    - Trade-off: Management is somewhat more complex
 
-- Transit Gateway (Avoid for Hot Path):
+- Transit Gateway (TGW) (Avoid for Hot Path):
     - Adds latency and jitter
-    - Introduces additional network hop
-    - Only use for: Control plane traffic or non-latency-sensitive workloads
-    - Some customers use TGW for multicast, but this adds significant overhead
+    - Suitable for control plane and non-latency-sensitive workloads
+    - Easier to manage compared to VPC peering
+      >💡Some use cases leverage TGW for multicast
 
 - Public IP (Same AZ):
-    - Lower latency than PrivateLink
+    - Achieves lower latency than PrivateLink
     - Removes NLB from the path
-    - Traffic stays within AWS network despite using public IPs
-    - Surprising finding: Can be faster than PrivateLink for same-AZ communication
 
 ### Removing Middleboxes from Hot Paths
 
-- Load Balancers:
-    - Remove all load balancers (ELB, ALB, NLB) from latency-sensitive paths
-    - Use direct instance-to-instance communication
+- Reducing Load Balancers:
+    - Remove load balancers (ELB, ALB, NLB) from latency-sensitive paths
+    - Design to minimize the number of load balancers wherever possible
+      >💡Eliminating middleboxes from high-priority communication paths is critically important for latency reduction
 
-- Service Discovery Alternatives:
-    - Implement distributed consensus mechanisms (e.g., Raft, Paxos)
-    - Use client-side intelligence for routing decisions
-    - Maintain in-memory caching of service membership
-    - Avoid DNS lookups in hot paths; use async lookups if needed
-    - Consider service mesh patterns with sidecar proxies (but measure impact)
-
-- Cache Co-location:
-    - Co-locate caches "on-box" rather than using ElastiCache
-    - Use in-process or shared memory for fastest access
-    - Eliminates network round-trip for cache lookups
-    - Trade-off: Less cache sharing, but much lower latency
-
-### Inter-Process Communication (IPC) Techniques
-
-- Minimize Number of Boxes:
-
-    - Fewer boxes = fewer network hops
-    - Consolidate services on larger instances rather than microservices on small instances
-
-- IPC Methods (Fastest to Slowest):
-
-    - Shared Memory: Fastest, zero-copy communication between processes
-    - UNIX Domain Sockets: Very fast, local to single machine
-    - Loopback (localhost): Fast, but involves network stack
-    - Same-AZ network: Microsecond latency with CPGs
-    - Cross-AZ network: Millisecond latency (avoid)
-
-- High Availability Strategy:
-
-    - Run multiple processes on the same large instance
-    - Use IPC for communication between components
-    - Keep hot standby processes on the same instance or nearby instances in CPG
-    - Fail over locally before failing over to another instance
-
-## 3. Inter-Region Connectivity
-**Third-Party Network Providers**
+## 3. Inter-Region Connectivity Optimization
+### Leveraging Third-Party Network Providers
 
 - Why Use Third-Party Providers:
 
-    - AWS backbone optimizes for aggregate throughput, not minimum latency
-    - Third-party providers offer dedicated low-latency routes
-    - Particularly beneficial for specific region pairs (APAC-Europe, APAC-US)
+    - The AWS global network backbone is optimized for throughput (bandwidth capacity)
+    - Third-party provider dedicated networks are designed and optimized with latency as the top priority
+    - Particularly significant benefits for long-distance international routes such as APAC-Europe and APAC-US
 
 - Major Providers:
 
     - McKay Brothers
-    - BSO (BT Radianz)
+    - BSO
     - Avelacom
     - Equinix
     - Colts
     - Megaport
 
-- How It Works:
+- Implementation Approach:
 
-    - Provision Direct Connect (DX) in each region
-    - Third-party provider carries traffic between DX locations
-    - You control routing to prefer third-party paths
+    - Building a Direct Connect between AWS and the third-party network is mandatory
+    - After Direct Connect setup is complete, routing must be strictly controlled to ensure traffic is correctly directed through the third-party network
 
-**Direct Connect Setup and Architecture**
-
-- Optimal Routing Architecture:
-
-- Best Practice:
-
-    - Direct VIF (Virtual Interface) association to DX Gateways or Virtual Private Gateways
-    - Minimize hops from VPC to Direct Connect location
-    - Avoid routing through Transit Gateway or inspection VPCs
-
-- Latency Considerations:
-
-    - Region-to-DX latency: Distance from your VPC to the DX location
-    - DX-to-DX latency: Third-party provider's network performance
-    - Total latency = Region-to-DX + DX-to-DX + DX-to-Region
-
-- Strategy: Multiple Connections
-
-    - Provision multiple DX connections with different providers
-    - Measure latency on each path
-    - Arbitrage latency by routing traffic over the fastest path
-    - Use BGP routing policies to prefer lower-latency paths
+### Direct Connect Architecture Design
 
 - Architecture Patterns:
 
     - Single-Region to Single-Region:
-
     ```txt
     VPC → VGW → DX → Third-Party Network → DX → VGW → VPC
     ```
@@ -221,42 +171,26 @@
     ```txt
     VPC → DX Gateway → Multiple DX Connections → Third-Party Providers
     ```
-    - Avoid:
+
+    - Patterns to Avoid:
     ```txt
     VPC → TGW → DX Gateway → DX (adds TGW hop)
     VPC → Inspection VPC → DX (adds inspection overhead)
     ```
 
-**Latency Optimization Checklist for Inter-Region**
+      >💡When prioritizing low latency, avoid using TGW or Inspection VPCs in the design wherever possible
 
-- Planning Phase:
+### Achievable Latency in Practice
 
-    - Identify required region pairs
-    - Measure baseline AWS backbone latency
-    - Contact third-party providers for quotes and latency estimates
-    - Calculate total latency including DX location distances
+- Representative Latency Figures:
 
-- Implementation Phase:
+    - Same AZ (with CPG): RTT latency 10-50 microseconds
+    - Cross-AZ within same region: RTT latency 1-2 milliseconds
+    - Cross-region via AWS backbone: 20-100 milliseconds depending on geographic distance
+    - With third-party dedicated networks: **10-50% improvement** in inter-region latency
 
-    - Provision DX in each region (prefer locations closest to your VPCs)
-    - Set up VIFs with direct association (avoid TGW)
-    - Configure BGP with latency-based routing
-    - Implement monitoring for path latency
+## Summary
 
-- Optimization Phase:
-
-    - Measure actual latency on all paths
-    - Adjust BGP preferences based on measurements
-    - Consider multiple providers for redundancy and latency arbitrage
-    - Monitor for path changes and re-optimize
-
-- Real-World Performance Expectations
-
-    - Typical Latencies:
-
-        - Same AZ (CPG): 10-50μs round-trip
-        - Cross-AZ (same region): 1-2ms round-trip
-        - Cross-region (AWS backbone): 20-100ms depending on distance
-        - Cross-region (third-party): 10-50% improvement over AWS backbone
-
-
+- The above covers the overall strategy for achieving low latency on AWS in the crypto-asset space
+- In practice, there are many fine-grained considerations to account for
+- Optimal strategies vary depending on environment and requirements, necessitating case-by-case validation
